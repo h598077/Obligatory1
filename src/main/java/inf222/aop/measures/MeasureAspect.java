@@ -1,11 +1,13 @@
 package inf222.aop.measures;
 
+import org.aspectj.lang.annotation.Aspect;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/* TODO: annotation */
+@Aspect
 public class MeasureAspect {
     private final String regex;
     private final Pattern pattern;
