@@ -54,11 +54,9 @@ public class MeasureAspect {
             String unit = matcher.group(1);
             Double factor = toMeter.get(unit);
 
-            double valueInMeters = (Double) pjp.getArgs()[0];
+            double valueInMeters = (Double) pjp.getArgs()[0]; // a point in  program’s execution (• a method call • a constructor call • a field being set)
 
-            if (valueInMeters < 0) {        // If value is negative
-                throw new Error("Illegal modification");
-            }
+
 
             double valueInOriginalUnit = valueInMeters / factor;   // from meters to the original unit before storing
 
@@ -67,6 +65,22 @@ public class MeasureAspect {
             pjp.proceed();
         }
     }
+
+    // Intercepts any set access to check negative value
+    @Around("set(double inf222.aop.measures.Measures.*) && !withincode(inf222.aop.measures.Measures.new(..))")
+    public void validatePositiveMeasure(ProceedingJoinPoint pjp) throws Throwable {
+
+        double newValue = (Double) pjp.getArgs()[0];
+
+        // Check if the new value is negative
+        if (newValue < 0) {
+            throw new Error("Illegal modification");
+        }
+
+        // Proceed with the original field assignment
+        pjp.proceed();
+    }
+
 
 
 }
