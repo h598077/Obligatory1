@@ -15,7 +15,7 @@ import inf222.aop.account.annotation.Transfer;
 @Aspect
 public class TransferAspect {
 
-    @Around("execution(* *(..)) && @annotation(transferAnnotation)")    // intercepts any method annotated with @Transfer. execution(...) restricts it strictly to method execution.
+    @Around("execution(* *(..)) && @annotation(transferAnnotation)")    //intercepts any method annotated with @Transfer. execution(...) restricts it strictly to method execution.
     public Object logTransfer(ProceedingJoinPoint pjp, Transfer transferAnnotation) throws Throwable {
 
         Logger logger = LoggerFactory.getLogger(pjp.getTarget().getClass());
