@@ -15,49 +15,36 @@ import inf222.aop.account.annotation.Transfer;
 @Aspect
 public class TransferAspect {
 
-    @Around("execution(* *(..)) && @annotation(transferAnnotation)")    //intercepts any method annotated with @Transfer. execution(...) restricts it strictly to method execution.
+    @Around("execution(* *(..)) && @annotation(transferAnnotation)")    // intercepts any method annotated with @Transfer. execution(...) restricts it strictly to method execution.
     public Object logTransfer(ProceedingJoinPoint pjp, Transfer transferAnnotation) throws Throwable {
 
+        Object result = pjp.proceed();  //Call the Original Method
+
         Logger logger = LoggerFactory.getLogger(pjp.getTarget().getClass());
-        Object[] args = pjp.getArgs();
+        Level level = transferAnnotation.value(); // Logging level
+        Object[] args = pjp.getArgs();   // Method arguments
 
-        MethodSignature signature = (MethodSignature) pjp.getSignature();
-        Method method = signature.getMethod();
-        String methodName = method.getName();
-        String[] methodParams = signature.getParameterNames();
-
-        Object result = null;
-        boolean success = false;
-
-        try {
-            result = pjp.proceed();
-            success = (result instanceof Boolean) && ((Boolean) result);
-
-            // Log international transfers (INFO)
-            if (transferAnnotation.internationalTransfer()) {
-                logger.info(logInternationalTransfer(args));
-            }
-
-            // Log transfers above threshold (INFO)
-            double amount = (Double) args[2];
-            if (amount > transferAnnotation.LogTransferAbove()) {
-                logger.info(logTransferAbove(args, transferAnnotation.LogTransferAbove()));
-            }
-
-            // Log errors (ERROR) if the transfer failed
-            if (!success && transferAnnotation.logErrors()) {
-                logger.error(logErrors(args, methodName, methodParams));
-            }
-
-            return result;
-
-        } catch (Throwable ex) {
-            // Log errors (ERROR) on exception
-            if (transferAnnotation.logErrors()) {
-                logger.error(logErrors(args, methodName, methodParams));
-            }
-            throw ex;
+        if (transferAnnotation.internationalTransfer()) {  //Log international transfers
+            String msg = logInternationalTransfer(args);
+            logger.atLevel(level).log(msg);
         }
+
+        Double amount = (Double) args[2];
+        if (amount > transferAnnotation.LogTransferAbove()) {   // Log transfers above a certain amount
+            String msg = logTransferAbove(args, transferAnnotation.LogTransferAbove());
+            logger.atLevel(level).log(msg);
+        }
+
+        if (transferAnnotation.logErrors() && Boolean.FALSE.equals(result)) {  // Log Errors
+            MethodSignature signature = (MethodSignature) pjp.getSignature();
+            String methodName = signature.getName();
+            String[] paramNames = signature.getParameterNames();
+
+            String msg = logErrors(args, methodName, paramNames);
+            logger.atLevel(level).log(msg);
+        }
+
+        return result;
     }
     // Helper Methods
     private String logInternationalTransfer(Object[] methodArgs) {
