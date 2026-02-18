@@ -36,36 +36,28 @@ public class MeasureAspectTest {
     @DisplayName("Test that example run is as expected")
     void testExampleRun() {
         measures.runExample();
+        assertEquals("""
+                Initial Values:
+                l_ft: 1.524
+                w_in: 1.0922
+                h_cm: 1.3
+                a_m: 0.7
+                b_yd: 1.4630400000000001
 
-        // expected output
-        String expected = """
-    	            Initial Values:
-    	            l_ft: 1.524
-    	            w_in: 1.0922
-    	            h_cm: 1.3
-    	            a_m: 0.7
-    	            b_yd: 1.4630400000000001
+                After First Operations:
+                l_ft: 1.6002
+                w_in: 2.4922
+                h_cm: 0.30000000000000004
+                a_m: 0.35
+                b_yd: 2.9630400000000003
 
-    	            After First Operations:
-    	            l_ft: 1.6002
-    	            w_in: 2.4922
-    	            h_cm: 0.30000000000000004
-    	            a_m: 0.35
-    	            b_yd: 2.9630400000000003
-
-    	            Computed Values:
-    	            Volume of box: 1.1964055320000002
-    	            Sum of all distances: 7.705439999999999
-    	            Average value: 1.5410879999999998
-    	            Difference (ft - m): 1.2502
-    	            """;
-
-        // normalize line endings: replace Windows(\r\n) with Unix(\n)
-        String actual = outputStreamCaptor.toString().replace("\r\n", "\n").trim();
-        expected = expected.replace("\r\n", "\n").trim();
-
-        assertEquals(expected, actual);
+                Computed Values:
+                Volume of box: 1.1964055320000002
+                Sum of all distances: 7.705439999999999
+                Average value: 1.5410879999999998
+                Difference (ft - m): 1.2502""".trim(), outputStreamCaptor.toString().trim());
     }
+
 
     @Test
     @DisplayName("Test that assigning negative values fails")
