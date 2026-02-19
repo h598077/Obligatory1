@@ -4,9 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
 
 @Aspect   // modify method calls or field access without modifying the original code
 public class MeasureAspect {
@@ -26,60 +30,72 @@ public class MeasureAspect {
         pattern = Pattern.compile(regex);
     }
 
-    // Intercepts any get access to a double field in Measures
-    @Around("get(double inf222.aop.measures.Measures.*)")
-    public double convertToMeters(ProceedingJoinPoint pjp) throws Throwable {
-        String fieldName = pjp.getSignature().getName();
-        Matcher matcher = pattern.matcher(fieldName);
 
-        if (matcher.matches()) {    // Checks if the field name ends with a  unit.
-            String unit = matcher.group(1);
-            Double factor = toMeter.get(unit);
+    @Pointcut("get(* *_*) && !within(MeasureAspect)")
+    public void measureFieldGet() {}
 
-            double originalValue = (Double) pjp.proceed();  //Call the original getter
 
-            return originalValue * factor;
+    @Around("measureFieldGet()")
+    public Object convertToMeter(ProceedingJoinPoint jp) throws Throwable {
+        String fN = jp.getSignature().getName();
+        Matcher match = pattern.matcher(fN);
+        Object raw = jp.proceed();
+
+        if (!match.matches() || !(raw instanceof Number)) {
+            return raw;
         }
 
-        return (Double) pjp.proceed();   //Return value
-    }
-
-    // Intercepts any set access to a double field in Measures
-    @Around("set(double inf222.aop.measures.Measures.*) && !withincode(inf222.aop.measures.Measures.new(..))")
-    public void convertFromMeters(ProceedingJoinPoint pjp) throws Throwable {
-        String fieldName = pjp.getSignature().getName();
-        Matcher matcher = pattern.matcher(fieldName);
-
-        if (matcher.matches()) {   // Checks if the field name ends with a  unit.
-            String unit = matcher.group(1);
-            Double factor = toMeter.get(unit);
-
-            double valueInMeters = (Double) pjp.getArgs()[0]; // a point in  program’s execution (• a method call • a constructor call • a field being set)
-
-
-
-            double valueInOriginalUnit = valueInMeters / factor;   // from meters to the original unit before storing
-
-            pjp.proceed(new Object[]{valueInOriginalUnit});   // Calls the original setter with the converted value.
-        } else {
-            pjp.proceed();
+        String unit = match.group(1);
+        Double factor = toMeter.get(unit);
+        if (factor == null) {
+            return raw;
         }
+
+        double value = ((Number) raw).doubleValue();
+        return value * factor;
     }
 
-    // Intercepts any set access to check negative value
-    @Around("set(double inf222.aop.measures.Measures.*) && !withincode(inf222.aop.measures.Measures.new(..))")
-    public void validatePositiveMeasure(ProceedingJoinPoint pjp) throws Throwable {
 
-        double newValue = (Double) pjp.getArgs()[0];
+    @Pointcut("set(* *_*) && !within(MeasureAspect) && !cflow(execution(*.new(..)))")
+    public void measureFieldSetOne() {}
 
-        // Check if the new value is negative
-        if (newValue < 0) {
+
+    @Pointcut("set(* *_*) && !within(MeasureAspect)")
+    public void MeasureFieldSet() {}
+
+
+    @Around("measureFieldSetOne()")
+    public void convertBackFromMeter(ProceedingJoinPoint jp) throws Throwable {
+        Object arg = jp.getArgs()[0];
+        if (!(arg instanceof Number)) {
+            jp.proceed();
+            return;
+        }
+        double valueInMeters = ((Number) arg).doubleValue();
+
+        String fN = jp.getSignature().getName();
+        Matcher match = pattern.matcher(fN);
+
+        if (match.matches()) {
+            String unit = match.group(1);
+            Double factor = toMeter.get(unit);
+            if (factor != null) {
+                jp.proceed(new Object[]{ valueInMeters / factor });
+                return;
+            }
+        }
+        jp.proceed();
+    }
+
+
+    @Before("MeasureFieldSet()")
+    public void preventNegative(JoinPoint jp) {
+        Object arg = jp.getArgs()[0];
+        if (arg instanceof Number number && number.doubleValue() < 0) {
             throw new Error("Illegal modification");
         }
-
-        // Proceed with the original field assignment
-        pjp.proceed();
     }
+
 
 
 
